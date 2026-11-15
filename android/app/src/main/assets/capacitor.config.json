@@ -1,0 +1,11 @@
+{
+	"appId": "org.horaecanonicae.divineoffice",
+	"appName": "Horæ Canonicæ",
+	"webDir": "dist",
+	"plugins": {
+		"LocalNotifications": {
+			"iconColor": "#6B1420",
+			"sound": "cathedral_bell.mp3"
+		}
+	}
+}

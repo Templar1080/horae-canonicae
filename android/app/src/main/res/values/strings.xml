@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Horæ Canonicæ</string>
+    <string name="title_activity_main">Horæ Canonicæ</string>
+    <string name="package_name">org.horaecanonicae.divineoffice</string>
+    <string name="custom_url_scheme">org.horaecanonicae.divineoffice</string>
+</resources>

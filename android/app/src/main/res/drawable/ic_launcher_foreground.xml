@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Subtle inner gold frame -->
+    <path
+        android:pathData="M24,24 L84,24 L84,84 L24,84 Z"
+        android:strokeWidth="1.5"
+        android:strokeColor="#66D4AF5A"
+        android:fillColor="#00000000" />
+    <!-- Traditional Latin Cross in Antique Gold -->
+    <path
+        android:fillColor="#D4AF5A"
+        android:pathData="M51,29 L57,29 L57,43 L70,43 L70,49 L57,49 L57,79 L51,79 L51,49 L38,49 L38,43 L51,43 Z" />
+</vector>

@@ -1,0 +1,6 @@
+{
+  "name": "Divine Office Reminder",
+  "description": "A traditional 1960 Roman Breviary prayer-time companion with sunrise/sunset timing, 1960 liturgical calendar, alarm reminders, and direct Divinum Officium links.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
