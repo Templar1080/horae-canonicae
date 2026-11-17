@@ -468,6 +468,11 @@ export function HoursView({
                 {/* Expandable Per-Hour Editor */}
                 {isExpanded && (
                   <div className="border-t border-[#DDD3C0] bg-[#F3EDE0]/60 px-4 py-5 sm:px-6">
+                    {cfg.solarAnchor !== 'manual' && (
+                      <p className="mb-4 text-xs text-[#62564E]">
+                        {t.labels.manualTimeNotice}
+                      </p>
+                    )}
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                       <div>
                         <label
@@ -481,7 +486,10 @@ export function HoursView({
                           type="time"
                           value={cfg.weekdayTime}
                           onChange={(e) =>
-                            onUpdateHour(hour.id, { weekdayTime: e.target.value })
+                            onUpdateHour(hour.id, {
+                              weekdayTime: e.target.value,
+                              solarAnchor: 'manual',
+                            })
                           }
                           className="w-full min-h-[40px] rounded-lg border border-[#C9BDA8] bg-[#FBF8F1] px-3 py-1.5 text-sm text-[#1F1815] tabular-nums"
                         />
@@ -499,7 +507,10 @@ export function HoursView({
                           type="time"
                           value={cfg.weekendTime}
                           onChange={(e) =>
-                            onUpdateHour(hour.id, { weekendTime: e.target.value })
+                            onUpdateHour(hour.id, {
+                              weekendTime: e.target.value,
+                              solarAnchor: 'manual',
+                            })
                           }
                           className="w-full min-h-[40px] rounded-lg border border-[#C9BDA8] bg-[#FBF8F1] px-3 py-1.5 text-sm text-[#1F1815] tabular-nums"
                         />
