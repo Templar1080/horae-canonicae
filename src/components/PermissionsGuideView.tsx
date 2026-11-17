@@ -1,8 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { BellRing, Check, ShieldAlert } from 'lucide-react';
+import {
+  getNotificationPermissionState,
+  isNativeAndroid,
+  requestExactAlarmSetting,
+  requestNotificationPermission,
+} from '../lib/nativeNotifications';
 import type { TranslationBundle } from '../lib/i18n';
 import type { PermissionChecklist } from '../lib/types';
-import { PWAInstallCard } from './PWAInstallPanel';
 
 interface PermissionsGuideViewProps {
   permissions: PermissionChecklist;
@@ -64,36 +70,48 @@ export function PermissionsGuideView({
   onTriggerTestAlarm,
 }: PermissionsGuideViewProps) {
   const [selectedOem, setSelectedOem] = useState<OemKey>('stock');
-  const [browserPerm, setBrowserPerm] = useState<string>(() =>
-    typeof Notification !== 'undefined' ? Notification.permission : 'unsupported'
-  );
+  const [browserPerm, setBrowserPerm] = useState<string>('checking');
+  const nativeApp = Capacitor.isNativePlatform();
+  const nativeAndroid = isNativeAndroid();
 
-  const handleRequestBrowserNotifications = async () => {
-    if (typeof Notification === 'undefined') {
-      setBrowserPerm('unsupported');
-      return;
-    }
-    try {
-      const result = await Notification.requestPermission();
-      setBrowserPerm(result);
-      if (result === 'granted') {
-        onUpdatePermissions({ notificationsGranted: true });
-      }
-    } catch {
-      setBrowserPerm('denied');
-    }
+  useEffect(() => {
+    let active = true;
+    void getNotificationPermissionState().then((permissionState) => {
+      if (!active) return;
+      setBrowserPerm(permissionState);
+      onUpdatePermissions({ notificationsGranted: permissionState === 'granted' });
+    });
+    return () => {
+      active = false;
+    };
+  }, [onUpdatePermissions]);
+
+  const handleRequestNotifications = async () => {
+    const granted = await requestNotificationPermission();
+    const permissionState = await getNotificationPermissionState();
+    setBrowserPerm(permissionState);
+    onUpdatePermissions({ notificationsGranted: granted });
+  };
+
+  const handleRequestExactAlarm = async () => {
+    const granted = await requestExactAlarmSetting();
+    onUpdatePermissions({ exactAlarmVerified: granted });
   };
 
   const checklistItems: { key: keyof PermissionChecklist; title: string; desc: string }[] = [
     {
       key: 'notificationsGranted',
-      title: '1. Post Notifications (POST_NOTIFICATIONS)',
-      desc: 'Allows full-screen alarm banners and lock-screen Pray buttons to appear.',
+      title: '1. Notifications',
+      desc: nativeApp
+        ? 'Requested on first launch. Tap here to retry if notifications were denied.'
+        : 'Allow browser notifications here; your browser will ask you to confirm.',
     },
     {
       key: 'exactAlarmVerified',
-      title: '2. Exact Alarms & Reminders (SCHEDULE_EXACT_ALARM)',
-      desc: 'Ensures AlarmManager.setAlarmClock() wakes the device at the exact minute.',
+      title: '2. Exact alarms & reminders (SCHEDULE_EXACT_ALARM)',
+      desc: nativeAndroid
+        ? 'Android opens a settings page; you must enable exact alarms for on-time reminders.'
+        : 'This Android-only setting is not used by browser notifications.',
     },
     {
       key: 'batteryExemptionVerified',
@@ -118,9 +136,7 @@ export function PermissionsGuideView({
         </p>
       </div>
 
-      <PWAInstallCard />
-
-      {/* Live Browser & Audio Verification Box */}
+      {/* Live Permission & Audio Verification Box */}
       <section className="rounded-2xl border border-[#B88B2E]/40 bg-[#6B1420] p-6 text-[#FBF8F1] flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-xs text-[#D4AF5A] font-semibold">
@@ -128,22 +144,35 @@ export function PermissionsGuideView({
             <span>Live Device Verification</span>
           </div>
           <h2 className="font-display text-xl font-bold">
-            Browser Notification Status:{' '}
+            Notification access:{' '}
             <span className="text-[#D4AF5A] capitalize">{browserPerm}</span>
           </h2>
           <p className="text-sm text-[#E7D8C3]">
-            Grant notification access for this companion and send a test alarm to verify audio chimes and lock-screen alerts.
+            {nativeAndroid
+              ? 'The app requests notification access on first launch and can open system settings for exact alarms. You must approve these yourself; Android does not allow apps to grant protected settings silently. Battery and manufacturer auto-start settings remain manual.'
+              : nativeApp
+                ? 'The app requests notification access on first launch. System-level permissions still require your approval.'
+                : 'Browser notification access must be enabled through the browser prompt. Exact-alarm, battery, and manufacturer auto-start settings apply only to Android devices.'}
           </p>
         </div>
 
         <div className="flex flex-wrap gap-2.5 shrink-0">
           <button
             type="button"
-            onClick={handleRequestBrowserNotifications}
+            onClick={handleRequestNotifications}
             className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-[#FBF8F1]/30 bg-[#5A101A] px-4 py-2 text-xs font-semibold text-[#FBF8F1] hover:bg-[#4B0D16]"
           >
-            <span>{t.actions.requestPermission}</span>
+            <span>{nativeApp ? 'Enable notifications' : t.actions.requestPermission}</span>
           </button>
+          {nativeAndroid && (
+            <button
+              type="button"
+              onClick={handleRequestExactAlarm}
+              className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-[#D4AF5A]/50 bg-[#5A101A] px-4 py-2 text-xs font-semibold text-[#FBF8F1] hover:bg-[#4B0D16]"
+            >
+              <span>Exact alarm access</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={onTriggerTestAlarm}
@@ -170,8 +199,19 @@ export function PermissionsGuideView({
                   type="button"
                   role="checkbox"
                   aria-checked={checked}
-                  onClick={() => onUpdatePermissions({ [item.key]: !checked })}
-                  className={`flex w-full items-start gap-3 rounded-xl border p-3.5 text-start transition-colors ${
+                  disabled={item.key === 'exactAlarmVerified' && !nativeAndroid}
+                  onClick={() => {
+                    if (item.key === 'notificationsGranted') {
+                      if (!checked) void handleRequestNotifications();
+                      return;
+                    }
+                    if (item.key === 'exactAlarmVerified') {
+                      if (nativeAndroid && !checked) void handleRequestExactAlarm();
+                      return;
+                    }
+                    onUpdatePermissions({ [item.key]: !checked });
+                  }}
+                  className={`flex w-full items-start gap-3 rounded-xl border p-3.5 text-start transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
                     checked
                       ? 'border-[#275937]/40 bg-[#F0F4EE]'
                       : 'border-[#DDD3C0] bg-[#FBF8F1] hover:bg-[#F3EDE0]'

@@ -10,7 +10,6 @@ import type {
   SolarTimes,
 } from '../lib/types';
 import { CrossEmblem } from './CrossEmblem';
-import { PWAInstallCard } from './PWAInstallPanel';
 
 interface SettingsViewProps {
   settings: AppSettings;
@@ -77,8 +76,6 @@ export function SettingsView({
           Configure interface language, solar sunrise/sunset city, Matins night rubrics, widget style, and backup files.
         </p>
       </div>
-
-      <PWAInstallCard />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Language & Rubrics Version */}

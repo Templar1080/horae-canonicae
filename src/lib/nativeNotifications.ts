@@ -8,64 +8,182 @@ import type { AppSettings, CanonicalHourId, LanguageCode, PrayerLogEntry } from 
 
 const CHANNEL_HOURS = 'divine-office-hours-v2';
 const CHANNEL_DEVOTIONS = 'divine-office-devotions-v2';
+const NOTIFICATION_PROMPTED_KEY = 'horae-notification-prompted-v1';
+const EXACT_ALARM_PROMPTED_KEY = 'horae-exact-alarm-prompted-v1';
 
-let initialized = false;
-let permissionRequested = false;
+interface NotificationSyncArgs {
+  settings: AppSettings;
+  skippedToday: CanonicalHourId[];
+  snoozedMap: Partial<Record<CanonicalHourId, number>>;
+  prayerLog: PrayerLogEntry[];
+  language: LanguageCode;
+}
+
+let initializationPromise: Promise<void> | null = null;
+let pendingNotificationSync: NotificationSyncArgs | null = null;
+let notificationSyncPromise: Promise<void> | null = null;
+let startupPermissionRequestPromise: Promise<StartupPermissionResult | null> | null = null;
 
 export function isNativeAndroid(): boolean {
   return Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
 }
 
-export async function initNativeNotifications(): Promise<void> {
-  if (!Capacitor.isNativePlatform() || initialized) return;
-  initialized = true;
-
+function hasPromptedFor(key: string): boolean {
   try {
-    if (Capacitor.getPlatform() === 'android') {
-      await LocalNotifications.createChannel({
-        id: CHANNEL_HOURS,
-        name: 'Canonical Hours',
-        description: 'Alarm reminders for the Eight Canonical Hours of the 1960 Roman Breviary',
-        sound: 'cathedral_bell.mp3',
-        importance: 5,
-        visibility: 1,
-        vibration: true,
-        lights: true,
-        lightColor: '#D4AF5A',
-      });
+    return localStorage.getItem(key) === 'true';
+  } catch {
+    return false;
+  }
+}
 
-      await LocalNotifications.createChannel({
-        id: CHANNEL_DEVOTIONS,
-        name: 'Angelus & Daily Rosary',
-        description: 'Traditional daily Angelus / Regina Cæli and Rosary reminders',
-        sound: 'cathedral_bell.mp3',
-        importance: 5,
-        visibility: 1,
-        vibration: true,
-        lights: true,
-        lightColor: '#D4AF5A',
+function markPrompted(key: string): void {
+  try {
+    localStorage.setItem(key, 'true');
+  } catch {
+    // The OS permission check still prevents duplicate grants if storage is unavailable.
+  }
+}
+
+export function initNativeNotifications(): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return Promise.resolve();
+  if (initializationPromise) return initializationPromise;
+
+  initializationPromise = (async () => {
+    try {
+      if (Capacitor.getPlatform() === 'android') {
+        await LocalNotifications.createChannel({
+          id: CHANNEL_HOURS,
+          name: 'Canonical Hours',
+          description: 'Alarm reminders for the Eight Canonical Hours of the 1960 Roman Breviary',
+          sound: 'cathedral_bell.mp3',
+          importance: 5,
+          visibility: 1,
+          vibration: true,
+          lights: true,
+          lightColor: '#D4AF5A',
+        });
+
+        await LocalNotifications.createChannel({
+          id: CHANNEL_DEVOTIONS,
+          name: 'Angelus & Daily Rosary',
+          description: 'Traditional daily Angelus / Regina Cæli and Rosary reminders',
+          sound: 'cathedral_bell.mp3',
+          importance: 5,
+          visibility: 1,
+          vibration: true,
+          lights: true,
+          lightColor: '#D4AF5A',
+        });
+      }
+
+      await LocalNotifications.addListener('localNotificationActionPerformed', (action) => {
+        const url = action.notification?.extra?.divinumUrl;
+        if (typeof url === 'string' && url.startsWith('https://')) {
+          window.open(url, '_blank', 'noopener,noreferrer');
+        }
       });
+    } catch {
+      // Keep the app usable when native notification APIs are restricted.
+    }
+  })();
+
+  return initializationPromise;
+}
+
+export type NotificationPermissionState = 'granted' | 'denied' | 'prompt' | 'unsupported';
+
+export async function getNotificationPermissionState(): Promise<NotificationPermissionState> {
+  try {
+    if (Capacitor.isNativePlatform()) {
+      const { display } = await LocalNotifications.checkPermissions();
+      if (display === 'granted' || display === 'denied') return display;
+      return 'prompt';
     }
 
-    await LocalNotifications.addListener('localNotificationActionPerformed', (action) => {
-      const url = action.notification?.extra?.divinumUrl;
-      if (typeof url === 'string' && url.startsWith('https://')) {
-        window.open(url, '_blank', 'noopener,noreferrer');
-      }
-    });
+    if (typeof Notification === 'undefined') return 'unsupported';
+    if (Notification.permission === 'default') return 'prompt';
+    return Notification.permission;
   } catch {
-    // Ignore native initialization errors in restricted environments
+    return 'unsupported';
+  }
+}
+
+export async function requestNotificationPermission(): Promise<boolean> {
+  try {
+    if (Capacitor.isNativePlatform()) {
+      await initNativeNotifications();
+      const current = await LocalNotifications.checkPermissions();
+      if (current.display === 'granted') return true;
+      markPrompted(NOTIFICATION_PROMPTED_KEY);
+      const requested = await LocalNotifications.requestPermissions();
+      return requested.display === 'granted';
+    }
+
+    if (typeof Notification === 'undefined') return false;
+    return (await Notification.requestPermission()) === 'granted';
+  } catch {
+    return false;
   }
 }
 
 export async function requestExactAlarmSetting(): Promise<boolean> {
   if (!isNativeAndroid()) return false;
   try {
-    const res = await LocalNotifications.changeExactNotificationSetting();
-    return res.exact_alarm === 'granted';
+    const current = await LocalNotifications.checkExactNotificationSetting();
+    if (current.exact_alarm === 'granted') return true;
+
+    markPrompted(EXACT_ALARM_PROMPTED_KEY);
+    await LocalNotifications.changeExactNotificationSetting();
+    const updated = await LocalNotifications.checkExactNotificationSetting();
+    return updated.exact_alarm === 'granted';
   } catch {
     return false;
   }
+}
+
+export interface StartupPermissionResult {
+  notificationsGranted: boolean;
+  exactAlarmVerified: boolean;
+}
+
+/** Request OS-controlled permissions once on first native launch. Android still requires user approval. */
+export function requestStartupPermissions(): Promise<StartupPermissionResult | null> {
+  if (!Capacitor.isNativePlatform()) return Promise.resolve(null);
+  if (startupPermissionRequestPromise) return startupPermissionRequestPromise;
+
+  startupPermissionRequestPromise = (async () => {
+    await initNativeNotifications();
+    let notificationsGranted = (await getNotificationPermissionState()) === 'granted';
+
+    if (!notificationsGranted && !hasPromptedFor(NOTIFICATION_PROMPTED_KEY)) {
+      markPrompted(NOTIFICATION_PROMPTED_KEY);
+      notificationsGranted = await requestNotificationPermission();
+    }
+
+    let exactAlarmVerified = false;
+    if (isNativeAndroid()) {
+      try {
+        exactAlarmVerified =
+          (await LocalNotifications.checkExactNotificationSetting()).exact_alarm === 'granted';
+        if (
+          notificationsGranted &&
+          !exactAlarmVerified &&
+          !hasPromptedFor(EXACT_ALARM_PROMPTED_KEY)
+        ) {
+          markPrompted(EXACT_ALARM_PROMPTED_KEY);
+          exactAlarmVerified = await requestExactAlarmSetting();
+        }
+      } catch {
+        exactAlarmVerified = false;
+      }
+    }
+
+    return { notificationsGranted, exactAlarmVerified };
+  })().finally(() => {
+    startupPermissionRequestPromise = null;
+  });
+
+  return startupPermissionRequestPromise;
 }
 
 function buildDateAtMinutes(baseDate: Date, totalMinutes: number): Date {
@@ -83,25 +201,15 @@ function parseHHMMToMinutes(hhmm: string): number | null {
   return h * 60 + m;
 }
 
-export async function syncNativeNotifications(
-  settings: AppSettings,
-  skippedToday: CanonicalHourId[],
-  snoozedMap: Partial<Record<CanonicalHourId, number>>,
-  prayerLog: PrayerLogEntry[],
-  language: LanguageCode
-): Promise<void> {
+async function syncNativeNotificationsNow(args: NotificationSyncArgs): Promise<void> {
+  const { settings, skippedToday, snoozedMap, prayerLog, language } = args;
   if (!Capacitor.isNativePlatform()) return;
 
   try {
     await initNativeNotifications();
 
     const perms = await LocalNotifications.checkPermissions();
-    if (perms.display !== 'granted') {
-      if (permissionRequested) return;
-      permissionRequested = true;
-      const requested = await LocalNotifications.requestPermissions();
-      if (requested.display !== 'granted') return;
-    }
+    if (perms.display !== 'granted') return;
 
     let useExact = false;
     if (Capacitor.getPlatform() === 'android') {
@@ -214,4 +322,43 @@ export async function syncNativeNotifications(
   } catch {
     // Keep web preview and restricted devices error-free
   }
+}
+
+/** Serialize native rescheduling and collapse rapid changes to the latest schedule. */
+export function syncNativeNotifications(
+  settings: AppSettings,
+  skippedToday: CanonicalHourId[],
+  snoozedMap: Partial<Record<CanonicalHourId, number>>,
+  prayerLog: PrayerLogEntry[],
+  language: LanguageCode
+): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return Promise.resolve();
+
+  pendingNotificationSync = { settings, skippedToday, snoozedMap, prayerLog, language };
+  if (notificationSyncPromise) return notificationSyncPromise;
+
+  const syncLoop = async () => {
+    while (pendingNotificationSync) {
+      const next = pendingNotificationSync;
+      pendingNotificationSync = null;
+      await syncNativeNotificationsNow(next);
+    }
+  };
+
+  notificationSyncPromise = syncLoop().finally(() => {
+    notificationSyncPromise = null;
+    if (pendingNotificationSync) {
+      const latest = pendingNotificationSync;
+      pendingNotificationSync = null;
+      void syncNativeNotifications(
+        latest.settings,
+        latest.skippedToday,
+        latest.snoozedMap,
+        latest.prayerLog,
+        latest.language
+      );
+    }
+  });
+
+  return notificationSyncPromise;
 }
