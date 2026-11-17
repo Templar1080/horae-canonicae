@@ -108,6 +108,25 @@ test('schedule engine handles weekend times, solar offsets, quiet nights, and ma
   );
 });
 
+test('fixed manual hour times override solar anchors for the selected weekday or weekend schedule', () => {
+  const settings = createDefaultSettings();
+  settings.useSolarTiming = true;
+  settings.useWeekendSchedule = true;
+  settings.hours.prime.solarAnchor = 'manual';
+  settings.hours.prime.weekdayTime = '08:37';
+  settings.hours.prime.weekendTime = '09:12';
+
+  const weekday = resolveDailySchedule(new Date(2026, 10, 16, 7, 0), settings, [], {}, []);
+  const weekend = resolveDailySchedule(new Date(2026, 10, 15, 7, 0), settings, [], {}, []);
+  const weekdayPrime = weekday.hours.find((hour) => hour.id === 'prime')!;
+  const weekendPrime = weekend.hours.find((hour) => hour.id === 'prime')!;
+
+  assert.equal(weekdayPrime.effectiveTime, '08:37');
+  assert.equal(weekdayPrime.source, 'manual_weekday');
+  assert.equal(weekendPrime.effectiveTime, '09:12');
+  assert.equal(weekendPrime.source, 'manual_weekend');
+});
+
 test('backup serialization and parsing roundtrips cleanly', () => {
   const settings = createDefaultSettings();
   settings.language = 'fa';

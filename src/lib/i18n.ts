@@ -45,6 +45,7 @@ export interface TranslationBundle {
     weekdayMode: string;
     weekendMode: string;
     solarEnabled: string;
+    manualTimeNotice: string;
     anticipatedTomorrow: string;
     quietNightMuted: string;
     skippedBadge: string;
@@ -113,6 +114,8 @@ export const TRANSLATIONS: Record<LanguageCode, TranslationBundle> = {
       weekdayMode: 'Weekday Schedule',
       weekendMode: 'Weekend Schedule',
       solarEnabled: 'Solar Astronomical Timing',
+      manualTimeNotice:
+        "Editing either fixed time switches this hour to manual timing; today's displayed time uses the weekday/weekend value for today. Select a solar anchor to resume solar timing.",
       anticipatedTomorrow: 'Anticipated for tomorrow’s Office',
       quietNightMuted: 'Muted by Quiet Night Matins',
       skippedBadge: 'Skipped today',
@@ -234,6 +237,8 @@ export const TRANSLATIONS: Record<LanguageCode, TranslationBundle> = {
       weekdayMode: 'Ordo Ferialis',
       weekendMode: 'Ordo Sabbati et Dominicæ',
       solarEnabled: 'Computatio Solaris',
+      manualTimeNotice:
+        'Si tempus certum mutas, hæc hora ad tempus manuale transit; tempus hodiernum ex ordine feriali vel festivo eligitur. Elige ancoram solarem ut computationem solarem restituas.',
       anticipatedTomorrow: 'Anticipata pro Officio crastino',
       quietNightMuted: 'Silens propter quietem noctis',
       skippedBadge: 'Omissa hodie',
@@ -355,6 +360,8 @@ export const TRANSLATIONS: Record<LanguageCode, TranslationBundle> = {
       weekdayMode: 'برنامه روزهای هفته',
       weekendMode: 'برنامه آخر هفته',
       solarEnabled: 'محاسبه نجومی طلوع و غروب',
+      manualTimeNotice:
+        'با تغییر هر زمان ثابت، این ساعت دستی می‌شود؛ زمان امروز بر اساس برنامهٔ روزهای هفته یا آخر هفته انتخاب می‌شود. برای بازگشت به زمان نجومی، لنگر خورشیدی را انتخاب کنید.',
       anticipatedTomorrow: 'پیش‌خوانی شبانه برای دعای فردا',
       quietNightMuted: 'خاموش در شب‌های استراحت',
       skippedBadge: 'امروز رد شد',
