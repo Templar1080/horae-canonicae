@@ -17,8 +17,8 @@ export function CrossEmblem({
     >
       {!imgError ? (
         <img
-          src="/src/assets/images/gold_cross_emblem_1794775563323.jpg"
-          alt="Gold Latin cross on burgundy leather"
+          src="/icon.svg"
+          alt="Gold cross, rosary, and open prayer book"
           referrerPolicy="no-referrer"
           onError={() => setImgError(true)}
           className="h-full w-full object-cover"

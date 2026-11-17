@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { AlarmOverlay } from './components/AlarmOverlay';
 import { CalendarView } from './components/CalendarView';
 import { HoursView } from './components/HoursView';
 import { PermissionsGuideView } from './components/PermissionsGuideView';
-import { OfflineIndicator } from './components/PWAInstallPanel';
+import { OfflineIndicator } from './components/OfflineIndicator';
 import { PrayerLogView } from './components/PrayerLogView';
 import { RosaryReaderModal } from './components/RosaryReaderModal';
 import { SettingsView } from './components/SettingsView';
@@ -13,7 +14,7 @@ import { buildDivinumOfficiumUrl } from './lib/divinumOfficium';
 import { TRANSLATIONS } from './lib/i18n';
 import { addDays, getLiturgicalDay, toDateKey } from './lib/liturgicalCalendar';
 import { resolveDailySchedule, resolveLocation } from './lib/scheduleEngine';
-import { syncNativeNotifications } from './lib/nativeNotifications';
+import { requestStartupPermissions, syncNativeNotifications } from './lib/nativeNotifications';
 import { formatMinutesToHHMM } from './lib/solar';
 import {
   createDefaultSettings,
@@ -48,6 +49,7 @@ export default function App() {
   const [snoozedMap, setSnoozedMap] = useState<Partial<Record<CanonicalHourId, number>>>({});
   const [activeAlarm, setActiveAlarm] = useState<ActiveAlarmState | null>(null);
   const [rosaryReaderOpen, setRosaryReaderOpen] = useState(false);
+  const [nativePermissionsReady, setNativePermissionsReady] = useState(false);
   const lastFiredSlotRef = useRef<string>('');
 
   const t = TRANSLATIONS[settings.language];
@@ -72,8 +74,31 @@ export default function App() {
     saveSkippedToday(todayKey, skippedToday);
   }, [todayKey, skippedToday]);
 
-  // Sync native Android LocalNotifications when running inside Capacitor APK
+  // Ask Android/iOS for OS-controlled permissions once on first native launch.
   useEffect(() => {
+    let active = true;
+
+    void requestStartupPermissions()
+      .then((permissionStatus) => {
+        if (!active || !permissionStatus) return;
+        setSettings((previous) => ({
+          ...previous,
+          permissions: { ...previous.permissions, ...permissionStatus },
+        }));
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (active) setNativePermissionsReady(true);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Sync native notifications after the first-run permission flow and whenever the schedule changes.
+  useEffect(() => {
+    if (!nativePermissionsReady) return;
     void syncNativeNotifications(
       settings,
       skippedToday,
@@ -81,7 +106,31 @@ export default function App() {
       prayerLog,
       settings.language
     );
-  }, [settings, skippedToday, snoozedMap, prayerLog, todayKey]);
+  }, [nativePermissionsReady, settings, skippedToday, snoozedMap, prayerLog, todayKey]);
+
+  // Refresh clock and OS permission state when returning from Android system settings/background.
+  useEffect(() => {
+    let active = true;
+    const refreshOnResume = () => {
+      if (document.visibilityState !== 'visible') return;
+      setNowDate(new Date());
+      void requestStartupPermissions().then((permissionStatus) => {
+        if (!active || !permissionStatus) return;
+        setSettings((previous) => ({
+          ...previous,
+          permissions: { ...previous.permissions, ...permissionStatus },
+        }));
+      });
+    };
+
+    document.addEventListener('visibilitychange', refreshOnResume);
+    window.addEventListener('focus', refreshOnResume);
+    return () => {
+      active = false;
+      document.removeEventListener('visibilitychange', refreshOnResume);
+      window.removeEventListener('focus', refreshOnResume);
+    };
+  }, []);
 
   const liturgicalDay = useMemo(() => getLiturgicalDay(nowDate), [nowDate]);
   const tomorrowDay = useMemo(() => getLiturgicalDay(addDays(nowDate, 1)), [nowDate]);
@@ -97,7 +146,11 @@ export default function App() {
       setActiveAlarm(alarmState);
       startRepeatingAlarm(alarmState.sound, alarmState.volume, settings.vibrateEnabled);
 
-      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      if (
+        !Capacitor.isNativePlatform() &&
+        typeof Notification !== 'undefined' &&
+        Notification.permission === 'granted'
+      ) {
         try {
           const notif = new Notification(`${alarmState.label} · ${alarmState.latinLabel}`, {
             body: `${alarmState.liturgicalDay.latinTitle} — ${t.openingVersicle}`,
@@ -454,10 +507,12 @@ export default function App() {
     setSnoozedMap({});
   }, []);
 
+  const handleCloseRosaryReader = useCallback(() => setRosaryReaderOpen(false), []);
+
   return (
     <div
       data-active-tab={activeTab}
-      className="min-h-screen bg-[#FBF8F1] text-[#1F1815] pb-24 md:pb-12"
+      className="min-h-[100dvh] bg-[#FBF8F1] text-[#1F1815] pb-24 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-12"
     >
       <TopBar
         activeTab={activeTab}
@@ -580,7 +635,7 @@ export default function App() {
       {rosaryReaderOpen && (
         <RosaryReaderModal
           mysteryOfTheDay={liturgicalDay.rosaryMystery}
-          onClose={() => setRosaryReaderOpen(false)}
+          onClose={handleCloseRosaryReader}
         />
       )}
       <OfflineIndicator />

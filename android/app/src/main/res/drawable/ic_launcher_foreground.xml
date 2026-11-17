@@ -4,14 +4,32 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Subtle inner gold frame -->
+    <!-- Rosary arc -->
     <path
-        android:pathData="M24,24 L84,24 L84,84 L24,84 Z"
-        android:strokeWidth="1.5"
-        android:strokeColor="#66D4AF5A"
-        android:fillColor="#00000000" />
-    <!-- Traditional Latin Cross in Antique Gold -->
+        android:fillColor="#00000000"
+        android:strokeColor="#D4AF5A"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:pathData="M34,39 C38,28 45,22 54,22 C63,22 70,28 74,39" />
+    <!-- Simple beads, kept inside the adaptive-icon safe area -->
     <path
         android:fillColor="#D4AF5A"
-        android:pathData="M51,29 L57,29 L57,43 L70,43 L70,49 L57,49 L57,79 L51,79 L51,49 L38,49 L38,43 L51,43 Z" />
+        android:pathData="M34,39 m-1.5,0 a1.5,1.5 0 1,0 3,0 a1.5,1.5 0 1,0 -3,0 M43,28 m-1.5,0 a1.5,1.5 0 1,0 3,0 a1.5,1.5 0 1,0 -3,0 M54,23 m-2,0 a2,2 0 1,0 4,0 a2,2 0 1,0 -4,0 M65,28 m-1.5,0 a1.5,1.5 0 1,0 3,0 a1.5,1.5 0 1,0 -3,0 M74,39 m-1.5,0 a1.5,1.5 0 1,0 3,0 a1.5,1.5 0 1,0 -3,0" />
+    <!-- Latin cross -->
+    <path
+        android:fillColor="#D4AF5A"
+        android:pathData="M51,29 L57,29 L57,40 L69,40 L69,46 L57,46 L57,66 L51,66 L51,46 L39,46 L39,40 L51,40 Z" />
+    <!-- Open prayer book -->
+    <path
+        android:fillColor="#FBF8F1"
+        android:strokeColor="#D4AF5A"
+        android:strokeWidth="1.5"
+        android:strokeLineJoin="round"
+        android:pathData="M54,66 C47,62 38,62 30,65 L30,80 C39,77 47,78 54,82 C61,78 69,77 78,80 L78,65 C70,62 61,62 54,66 Z" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#B88B2E"
+        android:strokeWidth="1.3"
+        android:strokeLineCap="round"
+        android:pathData="M54,67 L54,82 M34,68 C41,66 48,67 54,70 M74,68 C67,66 60,67 54,70" />
 </vector>

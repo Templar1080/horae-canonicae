@@ -27,16 +27,16 @@ export function TopBar({
 
   return (
     <>
-      <header className="sticky top-0 z-30 border-b border-[#DDD3C0] bg-[#FBF8F1]/95 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-8 px-4 py-2.5 sm:px-6 md:py-3">
+      <header className="sticky top-0 z-30 border-b border-[#DDD3C0] bg-[#FBF8F1]/95 pt-[env(safe-area-inset-top)] backdrop-blur-sm">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-3 py-2.5 sm:gap-4 sm:px-6 md:gap-8 md:py-3">
           {/* Zone 1: Brand Title */}
           <button
             type="button"
             onClick={() => onSelectTab('hours')}
-            className="flex items-center gap-3 text-start whitespace-nowrap shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6B1420]"
+            className="flex items-center gap-2 text-start whitespace-nowrap shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6B1420] sm:gap-3"
           >
-            <CrossEmblem size={34} />
-            <span className="font-display text-lg font-semibold tracking-tight text-[#4B0D16] sm:text-xl">
+            <CrossEmblem size={32} />
+            <span className="font-display text-base font-semibold tracking-tight text-[#4B0D16] sm:text-xl">
               {t.appTitle}
             </span>
           </button>
@@ -89,7 +89,7 @@ export function TopBar({
       {/* Mobile Bottom Thumb-Zone Navigation (stays <= 64px, combined sticky <= 14% of 844px) */}
       <nav
         aria-label="Mobile navigation"
-        className="fixed bottom-0 left-0 right-0 z-30 border-t border-[#DDD3C0] bg-[#FBF8F1]/95 backdrop-blur-md md:hidden"
+        className="fixed bottom-0 left-0 right-0 z-30 border-t border-[#DDD3C0] bg-[#FBF8F1]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
       >
         <div className="grid grid-cols-5 h-16">
           {navItems.map((item) => {

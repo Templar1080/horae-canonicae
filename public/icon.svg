@@ -1,5 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="96" fill="#5A101A" />
-  <rect x="24" y="24" width="464" height="464" rx="76" fill="none" stroke="#B88B2E" stroke-width="6" opacity="0.55" />
-  <path d="M234 96h44v102h102v44H278v174h-44V242H132v-44h102V96z" fill="#D4AF5A" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Horæ Canonicæ">
+  <rect width="512" height="512" fill="#5A101A"/>
+  <circle cx="256" cy="256" r="220" fill="none" stroke="#B88B2E" stroke-width="5" opacity=".48"/>
+  <path d="M156 216c12-49 48-86 100-94 52 8 88 45 100 94" fill="none" stroke="#D4AF5A" stroke-width="7" stroke-linecap="round"/>
+  <g fill="#D4AF5A">
+    <circle cx="157" cy="216" r="9"/><circle cx="170" cy="184" r="7"/><circle cx="191" cy="157" r="7"/>
+    <circle cx="218" cy="137" r="7"/><circle cx="256" cy="122" r="12"/><circle cx="294" cy="137" r="7"/>
+    <circle cx="321" cy="157" r="7"/><circle cx="342" cy="184" r="7"/><circle cx="355" cy="216" r="9"/>
+  </g>
+  <path d="M240 143h32v80h78v32h-78v91h-32v-91h-78v-32h78z" fill="#D4AF5A"/>
+  <path d="M256 326c-38-22-86-24-128-12v77c45-11 91-7 128 15 37-22 83-26 128-15v-77c-42-12-90-10-128 12z" fill="#FBF8F1" stroke="#D4AF5A" stroke-width="7" stroke-linejoin="round"/>
+  <path d="M256 326v80M145 331c38-8 77-5 111 13m111-13c-38-8-77-5-111 13" fill="none" stroke="#B88B2E" stroke-width="5" stroke-linecap="round"/>
 </svg>
